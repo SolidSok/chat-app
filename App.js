@@ -1,20 +1,33 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { Component } from 'react';
+import { StyleSheet, View } from 'react-native';
 
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+export default class HelloWorld extends Component {
+  render() {
+    return (
+      <View style={styles.container}>
+        <View style={styles.box1}></View>
+        <View style={styles.box2}></View>
+        <View style={styles.box3}></View>
+      </View>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: 'column',
+  },
+  box1: {
+    flex: 0.9,
+    backgroundColor: 'green',
+  },
+  box2: {
+    flex: 0.4,
+    backgroundColor: 'red',
+  },
+  box3: {
+    flex: 0.2,
+    backgroundColor: 'blue',
   },
 });
