@@ -1,33 +1,23 @@
 import React, { Component } from 'react';
-import { StyleSheet, View } from 'react-native';
+import Start from './components/Start';
+import Chat from './components/Chat';
+// import react native gesture handler
+import 'react-native-gesture-handler';
 
-export default class HelloWorld extends Component {
-  render() {
-    return (
-      <View style={styles.container}>
-        <View style={styles.box1}></View>
-        <View style={styles.box2}></View>
-        <View style={styles.box3}></View>
-      </View>
-    );
-  }
+// import react Navigation
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+
+// Create the navigator
+const Stack = createStackNavigator();
+
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Start">
+        <Stack.Screen name="Start" component={Start} />
+        <Stack.Screen name="Chat" component={Chat} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: 'column',
-  },
-  box1: {
-    flex: 0.9,
-    backgroundColor: 'green',
-  },
-  box2: {
-    flex: 0.4,
-    backgroundColor: 'red',
-  },
-  box3: {
-    flex: 0.2,
-    backgroundColor: 'blue',
-  },
-});
