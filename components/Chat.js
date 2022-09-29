@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Platform, KeyboardAvoidingView } from 'react-native';
-import { GiftedChat, Bubble } from 'react-native-gifted-chat';
+import { GiftedChat, Bubble, InputToolbar } from 'react-native-gifted-chat';
 import { initializeApp } from 'firebase/app';
 import {
   getFirestore,
@@ -11,6 +11,8 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { AsyncStorage } from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyDZx1WRlCV1lsSIJ5J9vTAqRe4hCiWRfe8',
@@ -27,9 +29,12 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore();
 
 export default function Chat(props) {
-  let { name, color } = props.route.params;
+  // name and color
+  const { name, color } = props.route.params;
   // messages state
-  let [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([]);
+  // whether user is offline
+  const [isConnected, setIsConnected] = useState();
   // User id state
   const [uid, setUid] = useState();
   const [user, setUser] = useState({
@@ -40,33 +45,80 @@ export default function Chat(props) {
 
   const messagesRef = collection(db, 'messages');
 
-  // Set the screen title to the user name entered in the start screen
+  // Offline --- setup async storage
+  // save messages to async storage
+  const saveMessages = async () => {
+    try {
+      await AsyncStorage.setItem('messages', JSON.stringify(messages));
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
+  // retrieve messages from async storage
+  const getMessages = async () => {
+    let messages = '';
+    try {
+      messages = (await AsyncStorage.getItem('messages')) || [];
+      setMessages(JSON.parse(messages));
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
+
+  // delete messages
+  const deleteMessages = async () => {
+    try {
+      await AsyncStorage.removeItem('messages');
+      setMessages([]);
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
+
   useEffect(() => {
+    // Set the screen title to the user name entered in the start screen
     props.navigation.setOptions({ title: name });
 
     const auth = getAuth();
 
-    const authUnsubscribe = onAuthStateChanged(auth, async user => {
-      if (!user) {
-        await signInAnonymously(auth);
+    //check if user is online/offline
+    NetInfo.fetch().then(connection => {
+      if (connection.isConnected) {
+        setIsConnected(true);
+      } else {
+        setIsConnected(false);
       }
-
-      // Set states for user uid and logged in text
-      setUid(user.uid);
-      setMessages([]);
-      setUser({
-        _id: user.uid,
-        name: name,
-        avatar: 'https://placeimg.com/140/140/any',
-      });
-
-      const messagesQuery = query(messagesRef, orderBy('createdAt', 'desc'));
-      unsubscribe = onSnapshot(messagesQuery, onCollectionUpdate);
     });
-    return () => {
-      authUnsubscribe();
-    };
-  }, [uid]);
+
+    if (isConnected) {
+      const authUnsubscribe = onAuthStateChanged(auth, async user => {
+        if (!user) {
+          await signInAnonymously(auth);
+        }
+
+        // Set states for user uid and logged in text
+        setUid(user.uid);
+        setMessages([]);
+        setUser({
+          _id: user.uid,
+          name: name,
+          avatar: 'https://placeimg.com/140/140/any',
+        });
+        // Delete previously saved messages in asyncStorage
+        deleteMessages();
+        // Save messages to asyncStorage
+        saveMessages();
+
+        const messagesQuery = query(messagesRef, orderBy('createdAt', 'desc'));
+        unsubscribe = onSnapshot(messagesQuery, onCollectionUpdate);
+      });
+      return () => {
+        authUnsubscribe();
+      };
+    } else {
+      getMessages();
+    }
+  }, [isConnected]);
 
   // add message to firestore collection
   const addMessage = message => {
@@ -120,11 +172,23 @@ export default function Chat(props) {
       />
     );
   };
+
+  // Hide input bar if user is online so that they cannot create or send messages
+  const renderInputToolbar = props => {
+    if (!isConnected) {
+      // Hide Toolbar
+    } else {
+      // Display Toolbar
+      return <InputToolbar {...props} />;
+    }
+  };
   return (
     <View style={[{ backgroundColor: color }, styles.container]}>
       <GiftedChat
         messages={messages}
         renderBubble={renderBubble}
+        renderInputToolbar={renderInputToolbar}
+        showAvatarForEveryMessage={true}
         onSend={messages => onSend(messages)}
         user={{
           _id: user._id,
