@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { StyleSheet, View, Platform, KeyboardAvoidingView } from 'react-native';
 import { GiftedChat, Bubble, InputToolbar } from 'react-native-gifted-chat';
 import { initializeApp } from 'firebase/app';
@@ -11,7 +13,6 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
-import { AsyncStorage } from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 
 const firebaseConfig = {
@@ -26,15 +27,20 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const db = getFirestore();
+
+const db = getFirestore(app);
+const auth = getAuth();
 
 export default function Chat(props) {
   // name and color
   const { name, color } = props.route.params;
+
   // messages state
   const [messages, setMessages] = useState([]);
+
   // whether user is offline
   const [isConnected, setIsConnected] = useState();
+
   // User id state
   const [uid, setUid] = useState();
   const [user, setUser] = useState({
@@ -78,8 +84,6 @@ export default function Chat(props) {
   useEffect(() => {
     // Set the screen title to the user name entered in the start screen
     props.navigation.setOptions({ title: name });
-
-    const auth = getAuth();
 
     //check if user is online/offline
     NetInfo.fetch().then(connection => {
