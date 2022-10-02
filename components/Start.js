@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,10 @@ import {
   Pressable,
 } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
+import { signInAnonymously } from 'firebase/auth';
+import { auth } from '../config/firebase';
+
+import NetInfo from '@react-native-community/netinfo';
 
 // background colors for App
 const colors = {
@@ -20,6 +24,34 @@ const colors = {
 export default function Start(props) {
   let [name, setName] = useState('');
   let [color, setColor] = useState();
+
+  // State to hold information if user is offline or online
+  const [isConnected, setIsConnected] = useState(false);
+
+  // Authenticate the user via Firebase and then redirect to the chat screen, passing the name and color props
+  const onHandleStart = () => {
+    if (isConnected) {
+      signInAnonymously(auth)
+        .then(() => {
+          console.log('Login success');
+          props.navigation.navigate('Chat', { name: name, color: color });
+        })
+        .catch(err => console.log(`Login err: ${err}`));
+    } else {
+      props.navigation.navigate('Chat', { name: name, color: color });
+    }
+  };
+
+  useEffect(() => {
+    // Check if user is offline or online using NetInfo
+    NetInfo.fetch().then(connection => {
+      if (connection.isConnected) {
+        setIsConnected(true);
+      } else {
+        setIsConnected(false);
+      }
+    });
+  });
 
   return (
     <View style={styles.container}>
@@ -59,9 +91,7 @@ export default function Start(props) {
             />
           </View>
           <Pressable
-            onPress={() =>
-              props.navigation.navigate('Chat', { name: name, color: color })
-            }
+            onPress={onHandleStart}
             style={({ pressed }) => [
               {
                 backgroundColor: pressed ? 'rgb(210, 230, 255)' : '#757083',

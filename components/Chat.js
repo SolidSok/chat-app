@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { StyleSheet, View, Platform, KeyboardAvoidingView } from 'react-native';
 import { GiftedChat, Bubble, InputToolbar } from 'react-native-gifted-chat';
-import { initializeApp } from 'firebase/app';
 import {
   getFirestore,
   collection,
@@ -12,24 +10,10 @@ import {
   query,
   orderBy,
 } from 'firebase/firestore';
-import { getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { auth, db } from '../config/firebase';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyDZx1WRlCV1lsSIJ5J9vTAqRe4hCiWRfe8',
-  authDomain: 'test-4595a.firebaseapp.com',
-  projectId: 'test-4595a',
-  storageBucket: 'test-4595a.appspot.com',
-  messagingSenderId: '375148346004',
-  appId: '1:375148346004:web:cd91fafaa0e039050dd281',
-  measurementId: 'G-8RG2MBX8VG',
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-
-const db = getFirestore(app);
-const auth = getAuth();
 
 export default function Chat(props) {
   // name and color
@@ -85,7 +69,10 @@ export default function Chat(props) {
     // Set the screen title to the user name entered in the start screen
     props.navigation.setOptions({ title: name });
 
-    //check if user is online/offline
+    // Create variable to hold unsubsriber
+    let unsubscribe;
+
+    // Check if user is offline or online using NetInfo
     NetInfo.fetch().then(connection => {
       if (connection.isConnected) {
         setIsConnected(true);
@@ -94,32 +81,23 @@ export default function Chat(props) {
       }
     });
 
-    if (isConnected) {
-      const authUnsubscribe = onAuthStateChanged(auth, async user => {
-        if (!user) {
-          await signInAnonymously(auth);
-        }
+    // If user is online, retrieve messages from firebase store, if offline use AsyncStorage
+    if (isConnected === true) {
+      // Create a query to the messages collection, retrieving all messages sorted by their date of creation
+      const messagesQuery = query(messagesRef, orderBy('createdAt', 'desc'));
 
-        // Set states for user uid and logged in text
-        setUid(user.uid);
-        setMessages([]);
-        setUser({
-          _id: user.uid,
-          name: name,
-          avatar: 'https://placeimg.com/140/140/any',
-        });
-        // Delete previously saved messages in asyncStorage
-        deleteMessages();
-        // Save messages to asyncStorage
-        saveMessages();
+      // onSnapshot returns an unsubscriber, listening for updates to the messages collection
+      unsubscribe = onSnapshot(messagesQuery, onCollectionUpdate);
 
-        const messagesQuery = query(messagesRef, orderBy('createdAt', 'desc'));
-        unsubscribe = onSnapshot(messagesQuery, onCollectionUpdate);
-      });
-      return () => {
-        authUnsubscribe();
-      };
+      // Delete old messages from asyncstorage
+      deleteMessages();
+      // Save new messages to asyncStorage
+      saveMessages();
+
+      // unsubsribe snapshot listener on unmount
+      return () => unsubscribe();
     } else {
+      // Load messages from asyncStorage
       getMessages();
     }
   }, [isConnected]);
