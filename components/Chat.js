@@ -62,10 +62,10 @@ export default function Chat(props) {
   };
   // retrieve messages from async storage
   const getMessages = async () => {
-    let messages = '';
+    let saveMessages = '';
     try {
-      messages = (await AsyncStorage.getItem('messages')) || [];
-      setMessages(JSON.parse(messages));
+      saveMessages = (await AsyncStorage.getItem('messages')) || [];
+      setMessages(JSON.parse(saveMessages));
     } catch (error) {
       console.log(error.message);
     }
