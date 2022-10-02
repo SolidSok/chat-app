@@ -105,7 +105,6 @@ export default function Chat(props) {
   // add message to firestore collection
   const addMessage = message => {
     addDoc(messagesRef, {
-      uid: uid,
       _id: message._id,
       text: message.text || '',
       createdAt: message.createdAt,
