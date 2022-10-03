@@ -10,7 +10,7 @@ import {
   query,
   orderBy,
 } from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
+import { db } from '../config/firebase';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
@@ -37,8 +37,9 @@ export default function Chat(props) {
 
   // Offline --- setup async storage
   // save messages to async storage
-  const saveMessages = async () => {
+  const saveMessages = async messages => {
     try {
+      console.log('local messages: ', messages);
       await AsyncStorage.setItem('messages', JSON.stringify(messages));
     } catch (error) {
       console.log(error.message);
@@ -131,6 +132,8 @@ export default function Chat(props) {
       });
     });
     setMessages(messages);
+
+    saveMessages(messages);
   };
 
   const renderBubble = props => {
@@ -153,7 +156,9 @@ export default function Chat(props) {
       />
     );
   };
-
+  renderCustomActions = props => {
+    return <CustomActions {...props} />;
+  };
   // Hide input bar if user is online so that they cannot create or send messages
   const renderInputToolbar = props => {
     if (!isConnected) {
