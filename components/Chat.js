@@ -53,7 +53,7 @@ export default function Chat(props) {
 
   // Offline --- setup async storage
   // save messages to async storage
-  const saveMessages = async () => {
+  const saveMessages = async messages => {
     try {
       await AsyncStorage.setItem('messages', JSON.stringify(messages));
     } catch (error) {
@@ -154,6 +154,8 @@ export default function Chat(props) {
       });
     });
     setMessages(messages);
+
+    saveMessages(messages);
   };
 
   const renderBubble = props => {
