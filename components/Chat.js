@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Platform, KeyboardAvoidingView } from 'react-native';
 import { GiftedChat, Bubble, InputToolbar } from 'react-native-gifted-chat';
 import {
-  getFirestore,
   collection,
   onSnapshot,
   addDoc,
@@ -14,6 +13,8 @@ import { db } from '../config/firebase';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
+import MapView from 'react-native-maps';
+import CustomActions from './CustomActions';
 
 export default function Chat(props) {
   // name and color
@@ -26,7 +27,7 @@ export default function Chat(props) {
   const [isConnected, setIsConnected] = useState();
 
   // User id state
-  const [uid, setUid] = useState();
+  const [uuid, setUuid] = useState();
   const [user, setUser] = useState({
     _id: '',
     name: '',
@@ -67,13 +68,13 @@ export default function Chat(props) {
   };
 
   useEffect(() => {
-    // Set the screen title to the user name entered in the start screen
+    // set screen title to the user name entered in the start screen
     props.navigation.setOptions({ title: name });
 
-    // Create variable to hold unsubsriber
+    // create variable to hold unsubsriber
     let unsubscribe;
 
-    // Check if user is offline or online using NetInfo
+    // check if user is offline or online using NetInfo
     NetInfo.fetch().then(connection => {
       if (connection.isConnected) {
         setIsConnected(true);
@@ -82,26 +83,26 @@ export default function Chat(props) {
       }
     });
 
-    // If user is online, retrieve messages from firebase store, if offline use AsyncStorage
+    // if user is online, retrieve messages from firebase store, if offline use AsyncStorage
     if (isConnected === true) {
-      // Create a query to the messages collection, retrieving all messages sorted by their date of creation
+      // create a query to the messages collection, retrieving all messages sorted by their date of creation
       const messagesQuery = query(messagesRef, orderBy('createdAt', 'desc'));
 
       // onSnapshot returns an unsubscriber, listening for updates to the messages collection
       unsubscribe = onSnapshot(messagesQuery, onCollectionUpdate);
 
-      // Delete old messages from asyncstorage
+      // delete old messages from asyncstorage
       deleteMessages();
-      // Save new messages to asyncStorage
+      // save new messages to asyncStorage
       saveMessages();
 
       // unsubsribe snapshot listener on unmount
       return () => unsubscribe();
     } else {
-      // Load messages from asyncStorage
+      // load messages from asyncStorage
       getMessages();
     }
-  }, [isConnected]);
+  }, []);
 
   // add message to firestore collection
   const addMessage = message => {
@@ -128,7 +129,13 @@ export default function Chat(props) {
         _id: data._id,
         text: data.text,
         createdAt: data.createdAt.toDate(),
-        user: data.user,
+        user: {
+          _id: data.user._id,
+          name: data.user.name,
+          avatar: data.user.avatar,
+        },
+        image: data.image || null,
+        location: data.location || null,
       });
     });
     setMessages(messages);
@@ -156,15 +163,33 @@ export default function Chat(props) {
       />
     );
   };
-  renderCustomActions = props => {
+  const renderCustomActions = props => {
     return <CustomActions {...props} />;
   };
-  // Hide input bar if user is online so that they cannot create or send messages
+  const renderCustomView = props => {
+    const { currentMessage } = props;
+    if (currentMessage.location) {
+      return (
+        <MapView
+          style={{ width: 150, height: 100, borderRadius: 13, margin: 3 }}
+          region={{
+            latitude: currentMessage.location.latitude,
+            longitude: currentMessage.location.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          }}
+        />
+      );
+    }
+    return null;
+  };
+
+  // hide input bar if user is online so that they cannot create or send messages
   const renderInputToolbar = props => {
     if (!isConnected) {
-      // Hide Toolbar
+      // hide Toolbar
     } else {
-      // Display Toolbar
+      // display Toolbar
       return <InputToolbar {...props} />;
     }
   };
@@ -173,12 +198,14 @@ export default function Chat(props) {
       <GiftedChat
         messages={messages}
         renderBubble={renderBubble}
+        renderActions={renderCustomActions}
+        renderCustomView={renderCustomView}
         renderInputToolbar={renderInputToolbar}
         showAvatarForEveryMessage={true}
         onSend={messages => onSend(messages)}
         user={{
           _id: user._id,
-          name: user.name,
+          name: name,
           avatar: user.avatar,
         }}
       />
