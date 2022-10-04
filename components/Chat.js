@@ -14,6 +14,8 @@ import {
 } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import NetInfo from '@react-native-community/netinfo';
+import MapView from 'react-native-maps';
+import CustomActions from './CustomActions';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyDZx1WRlCV1lsSIJ5J9vTAqRe4hCiWRfe8',
@@ -132,6 +134,8 @@ export default function Chat(props) {
       text: message.text || '',
       createdAt: message.createdAt,
       user: user,
+      image: message.image || null,
+      location: message.location || null,
     });
   };
 
@@ -151,13 +155,34 @@ export default function Chat(props) {
         text: data.text,
         createdAt: data.createdAt.toDate(),
         user: data.user,
+        image: data.image || null,
+        location: data.location || null,
       });
     });
     setMessages(messages);
 
     saveMessages(messages);
   };
-
+  const renderCustomActions = props => {
+    return <CustomActions {...props} />;
+  };
+  const renderCustomView = props => {
+    const { currentMessage } = props;
+    if (currentMessage.location) {
+      return (
+        <MapView
+          style={{ width: 150, height: 100, borderRadius: 13, margin: 3 }}
+          region={{
+            latitude: currentMessage.location.latitude,
+            longitude: currentMessage.location.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          }}
+        />
+      );
+    }
+    return null;
+  };
   const renderBubble = props => {
     return (
       <Bubble
@@ -194,6 +219,8 @@ export default function Chat(props) {
         messages={messages}
         renderBubble={renderBubble}
         renderInputToolbar={renderInputToolbar}
+        renderActions={renderCustomActions}
+        renderCustomView={renderCustomView}
         showAvatarForEveryMessage={true}
         onSend={messages => onSend(messages)}
         user={{
