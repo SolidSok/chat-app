@@ -16,6 +16,7 @@ import { getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import NetInfo from '@react-native-community/netinfo';
 import MapView from 'react-native-maps';
 import CustomActions from './CustomActions';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyDZx1WRlCV1lsSIJ5J9vTAqRe4hCiWRfe8',
@@ -32,6 +33,7 @@ const app = initializeApp(firebaseConfig);
 
 const db = getFirestore(app);
 const auth = getAuth();
+export const storage = getStorage(app);
 
 export default function Chat(props) {
   // name and color

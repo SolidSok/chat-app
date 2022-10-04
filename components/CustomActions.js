@@ -5,6 +5,8 @@ import * as Permissions from 'expo-permissions';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { connectActionSheet } from '@expo/react-native-action-sheet';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from './Chat';
 
 class CustomActions extends React.Component {
   imagePicker = async () => {
@@ -70,6 +72,7 @@ class CustomActions extends React.Component {
       console.log(error.message);
     }
   };
+
   uploadImageFetch = async uri => {
     const blob = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -88,13 +91,19 @@ class CustomActions extends React.Component {
     const imageNameBefore = uri.split('/');
     const imageName = imageNameBefore[imageNameBefore.length - 1];
 
-    const ref = firebase.storage().ref().child(`images/${imageName}`);
+    // Creating a reference to the images folder in Firebase Cloud Storage
+    const imageRef = ref(storage, 'images/' + imageName);
 
-    const snapshot = await ref.put(blob);
+    // Uploading the passed blob to Firebase Cloud Storage
+    await uploadBytes(imageRef, blob);
+    console.log('Uploading finished!');
 
-    blob.close();
+    // Retrieveing the download url from the uploaded blob
+    const downloadURL = await getDownloadURL(imageRef);
+    console.log('File available at', downloadURL);
 
-    return await snapshot.ref.getDownloadURL();
+    // Return url
+    return downloadURL;
   };
 
   onActionPress = () => {
